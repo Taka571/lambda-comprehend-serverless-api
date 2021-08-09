@@ -1,41 +1,65 @@
 package main
 
 import (
+	"os"
+	"os/exec"
+
 	"github.com/aws/aws-cdk-go/awscdk"
-	"github.com/aws/aws-cdk-go/awscdk/awssns"
+	"github.com/aws/aws-cdk-go/awscdk/awsiam"
+	"github.com/aws/aws-cdk-go/awscdk/awslambda"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/constructs-go/constructs/v3"
 	"github.com/aws/jsii-runtime-go"
 )
 
-type GoCdkStackProps struct {
+type PrototypeCdkGoStackProps struct {
 	awscdk.StackProps
 }
 
-func NewGoCdkStack(scope constructs.Construct, id string, props *GoCdkStackProps) awscdk.Stack {
+func NewComprehendLambdaStack(scope constructs.Construct, id string, props *PrototypeCdkGoStackProps) (awscdk.Stack, error) {
 	var sprops awscdk.StackProps
 	if props != nil {
 		sprops = props.StackProps
 	}
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
-	// The code that defines your stack goes here
+	Cmd := exec.Command("go", "build", "-o", "bin/handler/main", "lambda/main.go")
+	Cmd.Env = append(os.Environ(), "GOOS=linux", "CGO_ENABLED=0")
+	_, err := Cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
 
-	// as an example, here's how you would define an AWS SNS topic:
-	awssns.NewTopic(stack, jsii.String("MyTopic"), &awssns.TopicProps{
-		DisplayName: jsii.String("MyCoolTopic"),
+	var basicExecutionPolicy awsiam.IManagedPolicy = awsiam.ManagedPolicy_FromAwsManagedPolicyName(aws.String("service-role/AWSLambdaBasicExecutionRole"))
+	var comprehendFullAccessPolicy awsiam.IManagedPolicy = awsiam.ManagedPolicy_FromAwsManagedPolicyName(aws.String("ComprehendFullAccess"))
+	var role awsiam.Role = awsiam.NewRole(stack, jsii.String("go-cdk-lambda-role"), &awsiam.RoleProps{
+		AssumedBy:       awsiam.NewServicePrincipal(aws.String("lambda.amazonaws.com"), nil),
+		ManagedPolicies: &[]awsiam.IManagedPolicy{basicExecutionPolicy, comprehendFullAccessPolicy},
 	})
 
-	return stack
+	awslambda.NewFunction(stack, jsii.String("go-cdk-comprehend-lambda"), &awslambda.FunctionProps{
+		FunctionName: jsii.String("go-cdk-comprehend-function"),
+		Runtime:      awslambda.Runtime_GO_1_X(),
+		Code:         awslambda.Code_Asset(jsii.String("bin/handler/")),
+		Handler:      jsii.String("main"),
+		Role:         role,
+	})
+
+	return stack, nil
 }
 
 func main() {
 	app := awscdk.NewApp(nil)
 
-	NewGoCdkStack(app, "GoCdkStack", &GoCdkStackProps{
+	_, err := NewComprehendLambdaStack(app, "comprehendLambdaStack", &PrototypeCdkGoStackProps{
 		awscdk.StackProps{
 			Env: env(),
 		},
 	})
+
+	if err != nil {
+		panic(err)
+	}
 
 	app.Synth(nil)
 }
