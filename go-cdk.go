@@ -5,6 +5,7 @@ import (
 	"os/exec"
 
 	"github.com/aws/aws-cdk-go/awscdk"
+	"github.com/aws/aws-cdk-go/awscdk/awsapigateway"
 	"github.com/aws/aws-cdk-go/awscdk/awsiam"
 	"github.com/aws/aws-cdk-go/awscdk/awslambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -37,13 +38,41 @@ func NewComprehendLambdaStack(scope constructs.Construct, id string, props *Prot
 		ManagedPolicies: &[]awsiam.IManagedPolicy{basicExecutionPolicy, comprehendFullAccessPolicy},
 	})
 
-	awslambda.NewFunction(stack, jsii.String("go-cdk-comprehend-lambda"), &awslambda.FunctionProps{
+	var function awslambda.Function = awslambda.NewFunction(stack, jsii.String("go-cdk-comprehend-lambda"), &awslambda.FunctionProps{
 		FunctionName: jsii.String("go-cdk-comprehend-function"),
 		Runtime:      awslambda.Runtime_GO_1_X(),
 		Code:         awslambda.Code_Asset(jsii.String("bin/handler/")),
 		Handler:      jsii.String("main"),
 		Role:         role,
 	})
+
+	var api awsapigateway.LambdaRestApi = awsapigateway.NewLambdaRestApi(stack, jsii.String("go-cdk-api"), &awsapigateway.LambdaRestApiProps{
+		RestApiName:      jsii.String("comprehend-api"),
+		Handler:          function,
+		ApiKeySourceType: awsapigateway.ApiKeySourceType_HEADER,
+		EndpointTypes:    &[]awsapigateway.EndpointType{awsapigateway.EndpointType_REGIONAL},
+		DefaultMethodOptions: &awsapigateway.MethodOptions{
+			ApiKeyRequired: jsii.Bool(true),
+		},
+	})
+
+	apiKey := awsapigateway.NewApiKey(stack, jsii.String("go-cdk-api-key"), &awsapigateway.ApiKeyProps{
+		ApiKeyName: jsii.String("comprehend-api-key"),
+		Enabled:    jsii.Bool(true),
+	})
+
+	slice := []*awsapigateway.UsagePlanPerApiStage{}
+	ApiStages := append(slice, &awsapigateway.UsagePlanPerApiStage{
+		Api:   api,
+		Stage: api.DeploymentStage(),
+	})
+
+	usagePlan := api.AddUsagePlan(jsii.String("go-cdk-api-usage-plan"), &awsapigateway.UsagePlanProps{
+		Name:      jsii.String("comprehend-usage-plan"),
+		ApiStages: &ApiStages,
+	})
+
+	usagePlan.AddApiKey(apiKey, &awsapigateway.AddApiKeyOptions{OverrideLogicalId: jsii.String("comprehendApiKey")})
 
 	return stack, nil
 }
