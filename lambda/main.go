@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
@@ -13,9 +15,26 @@ func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		Region: aws.String("ap-northeast-1"),
 	})
 
+	text, ok := request.QueryStringParameters["text"]
+
+	if !ok {
+		return events.APIGatewayProxyResponse{
+			Body:       "text is not specified.",
+			StatusCode: 400,
+		}, nil
+	}
+
+	log.Printf("TEXT: %s", text)
+
+	languageCode, ok := request.QueryStringParameters["lg"]
+
+	if !ok {
+		languageCode = "ja"
+	}
+
 	input := &comprehend.DetectSentimentInput{
-		LanguageCode: aws.String("ja"),
-		Text:         aws.String("今日はいい日だ"),
+		LanguageCode: aws.String(languageCode),
+		Text:         aws.String(text),
 	}
 	res, err := svc.DetectSentiment(input)
 
