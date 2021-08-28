@@ -17,7 +17,7 @@ type PrototypeCdkGoStackProps struct {
 	awscdk.StackProps
 }
 
-func NewComprehendLambdaStack(scope constructs.Construct, id string, props *PrototypeCdkGoStackProps) (awscdk.Stack, error) {
+func NewComprehendLambdaApiStack(scope constructs.Construct, id string, props *PrototypeCdkGoStackProps) (awscdk.Stack, error) {
 	var sprops awscdk.StackProps
 	if props != nil {
 		sprops = props.StackProps
@@ -81,7 +81,7 @@ func NewComprehendLambdaStack(scope constructs.Construct, id string, props *Prot
 func main() {
 	app := awscdk.NewApp(nil)
 
-	_, err := NewComprehendLambdaStack(app, "comprehendLambdaStack", &PrototypeCdkGoStackProps{
+	_, err := NewComprehendLambdaApiStack(app, "comprehendLambdaApiStack", &PrototypeCdkGoStackProps{
 		awscdk.StackProps{
 			Env: env(),
 		},
