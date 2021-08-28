@@ -54,6 +54,7 @@ func NewComprehendLambdaStack(scope constructs.Construct, id string, props *Prot
 		DefaultMethodOptions: &awsapigateway.MethodOptions{
 			ApiKeyRequired: jsii.Bool(true),
 		},
+		Proxy: jsii.Bool(true),
 	})
 
 	apiKey := awsapigateway.NewApiKey(stack, jsii.String("go-cdk-api-key"), &awsapigateway.ApiKeyProps{
