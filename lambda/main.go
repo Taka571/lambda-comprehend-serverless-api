@@ -1,15 +1,14 @@
 package main
 
 import (
-	"context"
-
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/comprehend"
 )
 
-func detectSentiment(ctx context.Context) (*comprehend.DetectSentimentOutput, error) {
+func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	svc := comprehend.New(session.New(), &aws.Config{
 		Region: aws.String("ap-northeast-1"),
 	})
@@ -19,12 +18,20 @@ func detectSentiment(ctx context.Context) (*comprehend.DetectSentimentOutput, er
 		Text:         aws.String("今日はいい日だ"),
 	}
 	res, err := svc.DetectSentiment(input)
+
 	if err != nil {
-		return nil, err
+		return events.APIGatewayProxyResponse{
+			Body:       res.String(),
+			StatusCode: 500,
+		}, err
 	}
-	return res, nil
+
+	return events.APIGatewayProxyResponse{
+		Body:       res.String(),
+		StatusCode: 200,
+	}, nil
 }
 
 func main() {
-	lambda.Start(detectSentiment)
+	lambda.Start(handler)
 }
