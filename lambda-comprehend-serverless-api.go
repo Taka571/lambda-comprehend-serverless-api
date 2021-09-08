@@ -33,20 +33,20 @@ func NewComprehendLambdaApiStack(scope constructs.Construct, id string, props *P
 
 	var basicExecutionPolicy awsiam.IManagedPolicy = awsiam.ManagedPolicy_FromAwsManagedPolicyName(aws.String("service-role/AWSLambdaBasicExecutionRole"))
 	var comprehendFullAccessPolicy awsiam.IManagedPolicy = awsiam.ManagedPolicy_FromAwsManagedPolicyName(aws.String("ComprehendFullAccess"))
-	var role awsiam.Role = awsiam.NewRole(stack, jsii.String("go-cdk-lambda-role"), &awsiam.RoleProps{
+	var role awsiam.Role = awsiam.NewRole(stack, jsii.String("lambda-role"), &awsiam.RoleProps{
 		AssumedBy:       awsiam.NewServicePrincipal(aws.String("lambda.amazonaws.com"), nil),
 		ManagedPolicies: &[]awsiam.IManagedPolicy{basicExecutionPolicy, comprehendFullAccessPolicy},
 	})
 
-	var function awslambda.Function = awslambda.NewFunction(stack, jsii.String("go-cdk-comprehend-lambda"), &awslambda.FunctionProps{
-		FunctionName: jsii.String("go-cdk-comprehend-function"),
+	var function awslambda.Function = awslambda.NewFunction(stack, jsii.String("comprehend-lambda"), &awslambda.FunctionProps{
+		FunctionName: jsii.String("comprehend-function"),
 		Runtime:      awslambda.Runtime_GO_1_X(),
 		Code:         awslambda.Code_Asset(jsii.String("bin/handler/")),
 		Handler:      jsii.String("main"),
 		Role:         role,
 	})
 
-	var api awsapigateway.LambdaRestApi = awsapigateway.NewLambdaRestApi(stack, jsii.String("go-cdk-api"), &awsapigateway.LambdaRestApiProps{
+	var api awsapigateway.LambdaRestApi = awsapigateway.NewLambdaRestApi(stack, jsii.String("lambda-rest-api"), &awsapigateway.LambdaRestApiProps{
 		RestApiName:      jsii.String("comprehend-api"),
 		Handler:          function,
 		ApiKeySourceType: awsapigateway.ApiKeySourceType_HEADER,
@@ -57,7 +57,7 @@ func NewComprehendLambdaApiStack(scope constructs.Construct, id string, props *P
 		Proxy: jsii.Bool(true),
 	})
 
-	apiKey := awsapigateway.NewApiKey(stack, jsii.String("go-cdk-api-key"), &awsapigateway.ApiKeyProps{
+	apiKey := awsapigateway.NewApiKey(stack, jsii.String("api-key"), &awsapigateway.ApiKeyProps{
 		ApiKeyName: jsii.String("comprehend-api-key"),
 		Enabled:    jsii.Bool(true),
 	})
@@ -68,7 +68,7 @@ func NewComprehendLambdaApiStack(scope constructs.Construct, id string, props *P
 		Stage: api.DeploymentStage(),
 	})
 
-	usagePlan := api.AddUsagePlan(jsii.String("go-cdk-api-usage-plan"), &awsapigateway.UsagePlanProps{
+	usagePlan := api.AddUsagePlan(jsii.String("api-usage-plan"), &awsapigateway.UsagePlanProps{
 		Name:      jsii.String("comprehend-usage-plan"),
 		ApiStages: &ApiStages,
 	})

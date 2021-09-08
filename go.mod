@@ -1,4 +1,4 @@
-module go-cdk
+module github.com/Taka571/lambda-comprehend-serverless-api
 
 go 1.16
 
